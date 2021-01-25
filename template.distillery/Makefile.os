@@ -45,9 +45,9 @@ endif
 
 .PHONY: all css byte opt
 
-DIST_DIRS          := $(ETCDIR) $(DATADIR) $(LIBDIR) $(LOGDIR) $(STATICDIR) \
+DIST_DIRS          := $(ETCDIR) $(DATADIR) $(LIBDIR) $(LOGDIR) \
                       $(FILESDIR)/avatars/tmp $(ELIOMSTATICDIR) \
-                      $(shell dirname $(CMDPIPE)) $(ELIOMTMPDIR)
+                      $(shell dirname $(CMDPIPE))
 JS_PREFIX          := $(TEST_PREFIX)$(ELIOMSTATICDIR)/$(PROJECT_NAME)
 
 CONF_IN            := $(wildcard *.conf.in)
@@ -341,7 +341,7 @@ $(DEPSDIR):
 ##----------------------------------------------------------------------
 ## Clean up
 
-clean:: clean-style mobile-clean
+clean:: clean-style mobile-clean i18n-clean
 	-rm -f *.cm[ioax] *.cmxa *.cmxs *.o *.a *.annot
 	-rm -f *.type_mli
 	-rm -rf ${ELIOM_CLIENT_DIR} ${ELIOM_SERVER_DIR}

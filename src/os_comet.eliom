@@ -74,13 +74,13 @@ type msg =
 ]
 
 let create_monitor_channel () =
-  let monitor_stream, monitor_send = Lwt_stream.create () in
-  let channel = Eliom_comet.Channel.create
+  let monitor_stream, monitor_send = React.E.create () in
+  let channel = Eliom_comet.Channel.create_from_events
       ~scope:Os_session.user_indep_process_scope
       ~name:"monitor"
       monitor_stream
   in
-  channel, monitor_send
+  channel, (fun ev -> monitor_send ev)
 
 (* The monitor channel for each browser tab is kept in a client-process
    reference that remains even if user logs out (user_indep_process_scope)
@@ -96,12 +96,19 @@ let monitor_channel_ref =
 let already_send_ref =
   Eliom_reference.Volatile.eref ~scope:Eliom_common.request_scope false
 
+let%client handle_error =
+  ref
+    (fun exn ->
+      Eliom_lib.debug_exn
+        "Exception received on Os_comet's monitor channel: " exn;
+      restart_process ();
+      Lwt.return_unit)
+
+let%client set_error_handler f = handle_error := f
+
 let%client handle_message = function
   | Lwt_stream.Error exn ->
-    Eliom_lib.debug_exn
-      "Exception received on Os_comet's monitor channel: " exn;
-    restart_process ();
-    Lwt.return_unit
+    !handle_error exn
   | Lwt_stream.Value Heartbeat ->
     Eliom_lib.debug "poum";
     Lwt.return_unit
@@ -114,7 +121,7 @@ let%client handle_message = function
 
 let%server warn_state c state =
   match Eliom_reference.Volatile.Ext.get state monitor_channel_ref with
-  | Some (_, send) as v -> send (Some c)
+  | Some (_, send) -> send c
   | None -> ()
 
 let%server _ =
@@ -144,7 +151,7 @@ let%server _ =
            match
              Eliom_reference.Volatile.Ext.get state monitor_channel_ref with
            | Some (_, send) as v ->
-             if not (v == cur) then send (Some c)
+             if not (v == cur) then send c
            | None -> ())
     end;
     Lwt.return_unit
